@@ -21,7 +21,7 @@ Away, hold all your calls, grab an extra donut, and get ready to start!
 1.1 Monday with Bill
 ----------------------------------
 
-Where you meet Bill, your new mentor and programming buddy.
+*Where you meet Bill, your new mentor and programming buddy.*
 
 Welcome to your new job as a Ruby programmer. After you’ve settled
 yourself at your new desk with a shiny, latest-generation monitor and
