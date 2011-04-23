@@ -1,19 +1,15 @@
-1.2 Open Classes
+1.2 开放类(Open Classes)
 ----------------
 
-*Where Bill gives you your first taste of Ruby classes.*
+*这里比尔带你第一次品味Ruby的类*
 
-You and Bill have been browsing through the Bookworm source code
-for a few minutes when you spot your first refactoring opportunity. To
-print book titles on limited supports like tape labels, Bookworm has
-a function that strips all punctuation and special characters out of a
-string, leaving only alphanumeric characters and spaces:
+在你和比尔浏览了Bookworm源码几分钟以后，你提出了第一个需要重构的地方。Bookworm有一个函数，剥离了一个字符串的所有标点符号和特殊符号，仅仅留下字母数字和空格:
 
     def to_alphanumeric(s)
       s.gsub /[^\w\s]/, ''
     end
     
-This method also comes with its own unit test:
+这个方法的单元测试:
 
     require 'test/unit'
     class ToAlphanumericTest < Test::Unit::TestCase
@@ -22,17 +18,11 @@ This method also comes with its own unit test:
       end
     end
     
-“This to_alphanumeric( ) method is not very object oriented, is it?” Bill
-muses. “It’d be better if we could just ask the string to convert itself,
-rather than pass it through an external method.”
+“这个to_alphanumeric( )方法不是很面向对象，是不是？”， 比尔来灵感了，“如果我们能让这个字符串转换它自己，应该比把它传给一个方法好的多。”
 
-Even though you’re the new guy on the block, you can’t help but interrupt.
-“But this is just a regular String. To add methods to it, we’d have
-to write a whole new AlphanumericString class. I’m not sure it would be
-worth it.”
+虽然你是个新手，无法提供帮助，但是你插嘴道：“但是这只是一个字符串正则表达式。去为它增加方法，我们不得不去写一个新的AlphanumericString类。我不确定这样做值不值得。”
 
-“I think I have a simpler solution to this problem,” Bill replies. He opens
-the String class and plants the to_alphanumeric( ) method there:
+“我想我有一个更简单的方法解决这个问题”， 比尔回答。 它打开了String类， 并且把to_alphanumeric( )放置到那里：
 
     class String
       def to_alphanumeric
@@ -40,8 +30,7 @@ the String class and plants the to_alphanumeric( ) method there:
       end
     end
 
-Bill also changes the callers to use String#to_alphanumeric( ). For example,
-the test becomes as follows:
+比尔也改变了String#to_alphanumeric( )的调用者. 例如，单元测试变成了下面形式:
 
     require 'test/unit'
       class StringExtensionsTest < Test::Unit::TestCase
@@ -50,14 +39,11 @@ the test becomes as follows:
         end
       end
 
-To understand Bill’s trick, you need to know a thing or two about Ruby
-classes. Bill is only too happy to teach you. . . .
+我们需要了解一些关于Ruby类的知识才能理解比尔的技巧。 比尔很乐意去教你 。。。
 
-**Inside Class Definitions**
+**深入类定义(Inside Class Definitions)**
 
-In Ruby there is no real distinction between code that defines a class
-and code of any other kind. You can put any code you want in a class
-definition, as Bill demonstrates with a quick example:
+在Ruby中， 定义一个类的代码，和其他代码没有什么差别。你可以把任意代码放置到你想放置的类定义中， 就像比尔演示的这个例子:
 
     3.times do
       class C
@@ -69,11 +55,10 @@ definition, as Bill demonstrates with a quick example:
        Hello
 
 
->Where Should You Put Your Methods?
+>你应该把你的方法放到哪里?
 
->In Section 1.2, Open Classes, on page 28, Bill demonstrates how
->you can move the to_alphanumeric( ) method to the String class.
->But even if you can do this, you might wonder whether you
+>在1.2节, 开放类的28页, 比尔演示了如何把to_alphanumeric( )方法移动到String类里。
+>但是即使你能这样做，你可能也想知道你是否应该这样做。给系统中的每一个字符串都暴露一个to_alphanumeric( )方法？
 >should do it. Is it right to have every string in the system expose
 >a to_alphanumeric( ) method? Wouldn’t it be better to leave the
 >String class alone?
