@@ -1,0 +1,200 @@
+1.2 Open Classes
+----------------
+
+*Where Bill gives you your first taste of Ruby classes.*
+
+You and Bill have been browsing through the Bookworm source code
+for a few minutes when you spot your first refactoring opportunity. To
+print book titles on limited supports like tape labels, Bookworm has
+a function that strips all punctuation and special characters out of a
+string, leaving only alphanumeric characters and spaces:
+
+    def to_alphanumeric(s)
+      s.gsub /[^\w\s]/, ''
+    end
+    
+This method also comes with its own unit test:
+
+    require 'test/unit'
+    class ToAlphanumericTest < Test::Unit::TestCase
+      def test_strips_non_alphanumeric_characters
+        assert_equal '3 the Magic Number' , to_alphanumeric('#3, the *Magic, Number*?' )
+      end
+    end
+    
+“This to_alphanumeric( ) method is not very object oriented, is it?” Bill
+muses. “It’d be better if we could just ask the string to convert itself,
+rather than pass it through an external method.”
+
+Even though you’re the new guy on the block, you can’t help but interrupt.
+“But this is just a regular String. To add methods to it, we’d have
+to write a whole new AlphanumericString class. I’m not sure it would be
+worth it.”
+
+“I think I have a simpler solution to this problem,” Bill replies. He opens
+the String class and plants the to_alphanumeric( ) method there:
+
+    class String
+      def to_alphanumeric
+        gsub /[^\w\s]/, ''
+      end
+    end
+
+Bill also changes the callers to use String#to_alphanumeric( ). For example,
+the test becomes as follows:
+
+    require 'test/unit'
+      class StringExtensionsTest < Test::Unit::TestCase
+        def test_strips_non_alphanumeric_characters
+          assert_equal '3 the Magic Number' , '#3, the *Magic, Number*?'.to_alphanumeric
+        end
+      end
+
+To understand Bill’s trick, you need to know a thing or two about Ruby
+classes. Bill is only too happy to teach you. . . .
+
+**Inside Class Definitions**
+
+In Ruby there is no real distinction between code that defines a class
+and code of any other kind. You can put any code you want in a class
+definition, as Bill demonstrates with a quick example:
+
+    3.times do
+      class C
+        puts "Hello"
+      end
+    end
+    => Hello
+       Hello
+       Hello
+
+
+>Where Should You Put Your Methods?
+
+>In Section 1.2, Open Classes, on page 28, Bill demonstrates how
+>you can move the to_alphanumeric( ) method to the String class.
+>But even if you can do this, you might wonder whether you
+>should do it. Is it right to have every string in the system expose
+>a to_alphanumeric( ) method? Wouldn’t it be better to leave the
+>String class alone?
+>This time around, you’re dealing with a pretty generic functionality
+>that makes sense for all strings—so you can argue it
+>makes sense to follow Bill’s suggestion and put alphanumeric
+>conversion in the String class. In general, however, you should
+>think hard before you pollute Ruby’s standard libraries with a
+>lot of domain-specific methods. After all, a class such as String
+>already comes with loads of methods that you have to remember.
+>You do have alternatives to using an Open Class (31). You
+>could define a new AlphanumericString class or even add specific
+>methods like to_alphanumeric( ) only to a few, selected
+>strings (you’ll learn how to do that in the discussion of Singleton
+>Methods (133)). You’ll learn more Open Class alternatives
+>and variations in the rest of this book
+
+    class D
+      def y; 'y' ; end
+    end
+    obj = D.new
+    obj.x # => "x"
+    obj.y # => "y"
+
+When the previous code mentions class D for the first time, no class
+by that name exists yet. So, Ruby steps in and defines the class—and
+the x( ) method. At the second mention, class D already exists, so Ruby
+doesn’t need to define it. Instead, it just reopens the existing class and
+defines a method named y( ) there.
+
+In a sense, the class keyword in Ruby is more like a scope operator than
+a class declaration. Yes, it does create classes that don’t yet exist, but
+you might argue that it does this as a side effect. For class, the core job is to move you in the context of the class, where you can define methods.
+
+You might think that Bill is just nitpicking here, but this distinction
+about the class keyword is not an academic detail. It has an important
+practical consequence: you can always reopen existing classes, even
+standard library classes such as String or Array, and modify them on the
+fly. You can simply call this technique Open Class.
+
+To demonstrate how people use Open Classes in practice, Bill runs
+through a quick example from a real-life library.
+
+**The Money Example**
+
+As an example of Open Classes, Bill opens your eyes to the Money gem,
+a set of utility classes for managing money and currencies.1 Here’s how
+you create a Money object:
+
+    cents = 9999
+    # 99.99 US Dollars:
+    bargain_price = Money.new(cents)
+
+As a shortcut, you can also convert any number to a Money object by
+calling Numeric#to_money( ):
+
+    # 100.00 US Dollars:
+    standard_price = 100.to_money()
+
+Since Numeric is a standard Ruby class, you might wonder where the Numeric#to_money method comes from. Look through the source of the Money gem, and you’ll find code that reopens Numeric and defines that method:
+
+    class Numeric
+      def to_money
+        Money.new(self * 100)
+      end
+    end
+
+It’s quite common for libraries to use Open Classes this way.
+
+**The Problem with Open Classes**
+
+You and Bill don’t have to look much further before you stumble upon
+another opportunity to use Open Classes. The Bookworm source contains
+a method that replaces elements in an array.
+
+    def replace(array, from, to)
+      array.each_with_index do |e, i|
+        array[i] = to if e == from
+      end
+    end
+
+Instead of focusing on the internal workings of replace( ), you can look
+at Bookworm’s unit tests to see how that method is supposed to be
+used:
+
+    def test_replace
+      book_topics = ['html' , 'java' , 'css' ]
+      replace(book_topics, 'java' , 'ruby' )
+      expected = ['html' , 'ruby' , 'css' ]
+      assert_equal expected, book_topics
+    end
+
+This time, you know what to do. You grab the keyboard (taking advantage of Bill’s slower reflexes) and move the method to the Array class:
+
+    class Array
+      def replace(from, to)
+        each_with_index do |e, i|
+          self[i] = to if e == from
+        end
+      end
+    end
+
+Then you change all calls to replace( ) into calls to Array#replace( ). For example, the test becomes as follows:
+
+    def test_replace
+      book_topics = ['html' , 'java' , 'css' ]
+      book_topics.replace('java' , 'ruby' )
+      sexpected = ['html' , 'ruby' , 'css' ]
+      assert_equal expected, book_topics
+    end
+
+Everything looks like it’s in order until you run Bookworm’s unit tests. Not only do they break, but the failing tests seem to have nothing to do with the code you just edited. Bummer! What gives?
+
+**Monkey See, Monkey Patch**
+
+Your pal Bill comes to the rescue. “I think I know what just happened,” he mumbles. He fires up an irb session and gets a list of all methods in Ruby’s standard Array that begin with re:
+
+    [].methods.grep /^re/ # => [:replace, :reject, :reject!, :respond_to?, ...
+
+Yipes! In looking at the irb output, you spot the problem. Class Array already has a method named replace( ). When you defined your own replace( ) method, you inadvertently overwrote the original replace( ), a method that some other part of Bookworm was relying on.
+
+This is the dark side to Open Classes: if you casually add bits and pieces of functionality to classes, you can end up with bugs like the one you just encountered. Some people would frown upon this kind of reckless patching of classes, and they would refer to the previous code with a derogatory name: they’d call it a *Monkeypatch*. 
+
+You and Bill then rename your own version of Array#replace( ) to Array#substitute( ) and fix both the tests and the calling code. You just learned a lesson the hard way, but that didn’t spoil your attitude. If anything, this incident piqued your curiosity about Ruby classes. As it turns out, Bill is only too happy to tell you more about this topic.

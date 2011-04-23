@@ -1,0 +1,49 @@
+Chapter 1 Monday: The Object Model
+==================================
+
+Just glance at any Ruby program, and you’ll see objects everywhere.
+Do a double take, and you’ll see that objects are just citizens of a larger
+world that also includes language constructs such as classes, modules,
+and instance variables. Metaprogramming manipulates these language
+constructs, so you need to know a few things about them right off
+the bat.
+
+You are about to dig into the first concept: all these constructs live together
+in a system called the object model. The object model is where
+you’ll find answers to questions such as “Which class does this method
+come from?” and “What happens when I include this module?”
+
+Delving into the object model, at the very heart of Ruby, you’ll learn
+some powerful techniques, and you’ll also learn how to steer clear of a
+few pitfalls. Monday promises to be a full day, so set your IM status to
+Away, hold all your calls, grab an extra donut, and get ready to start!
+
+1.1 Monday with Bill
+----------------------------------
+
+Where you meet Bill, your new mentor and programming buddy.
+
+Welcome to your new job as a Ruby programmer. After you’ve settled
+yourself at your new desk with a shiny, latest-generation monitor and
+a cup of coffee, you can meet Bill, your mentor, experienced in all things
+Ruby. Yes, you have your first assignment at your new company, a new
+language to work with, and a new pair-programming buddy. What a
+Monday!
+
+Your assignment is with the Enterprise Integration Department (which
+is corporate-speak for “the folks hammering the legacy systems back into shape”). Given that Ruby is a new language for you, you’ve been
+practicing for a few weeks already. Bill, who has some months of Ruby
+under his belt, looks like a nice chap, so you know you’re going to have
+a good time—at least until your first petty fight over coding conventions.
+The boss wants you and Bill to get to know each other, so she’s asked
+the two of you to review the source of a small application called Bookworm.
+The company developed Bookworm to manage its large internal
+library of books. The program has slowly grown out of control as many
+different developers added their pet features to the mix, from text previews
+to magazine management and the tracking of borrowed books. As
+a result, the Bookworm source code is in dire need of refactoring. You
+and your new pal Bill have been selected to whip the Bookworm source
+back into shape.
+You and Bill are ready to get to work. With Bill sitting next to you at
+your desk, you fire up your text editor.
+
