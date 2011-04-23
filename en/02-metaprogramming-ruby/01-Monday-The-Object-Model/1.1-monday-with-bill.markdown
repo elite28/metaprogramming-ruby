@@ -44,6 +44,7 @@ to magazine management and the tracking of borrowed books. As
 a result, the Bookworm source code is in dire need of refactoring. You
 and your new pal Bill have been selected to whip the Bookworm source
 back into shape.
+
 You and Bill are ready to get to work. With Bill sitting next to you at
 your desk, you fire up your text editor.
 

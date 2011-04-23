@@ -1,49 +1,20 @@
-Chapter 1 Monday: The Object Model
+第一章 星期一: 对象模型(The Object Model)
 ==================================
 
-Just glance at any Ruby program, and you’ll see objects everywhere.
-Do a double take, and you’ll see that objects are just citizens of a larger
-world that also includes language constructs such as classes, modules,
-and instance variables. Metaprogramming manipulates these language
-constructs, so you need to know a few things about them right off
-the bat.
+随意找一段Ruby程序，你就会发现对象无所不在。再仔细看一眼，你会恍然大悟，原来对象仅仅是一个庞大语言结构世界的普通一员而已。除其之外，还包含类(classes), 模块(modules)和实例变量(instance variables)。而元编程操纵着这些语言结构， 所以，你应该马上了解它。
 
-You are about to dig into the first concept: all these constructs live together
-in a system called the object model. The object model is where
-you’ll find answers to questions such as “Which class does this method
-come from?” and “What happens when I include this module?”
+你即将探究到第一个概念: 所有这些语言结构都共生于一个被称为**对象模型**的系统中。 “这个方法来自于哪个类 ？”, “当我include一个模块的时候，发生了什么 ？”， 诸如此类的问题， 你都会在对象模型中寻找到答案!
 
-Delving into the object model, at the very heart of Ruby, you’ll learn
-some powerful techniques, and you’ll also learn how to steer clear of a
-few pitfalls. Monday promises to be a full day, so set your IM status to
-Away, hold all your calls, grab an extra donut, and get ready to start!
+钻研对象模型， Ruby的核心， 你将会学习到一些强大的技术， 你还会学到如何去规避陷阱。 周一，希望是充实的一天， 所以把你的IM状态设置为离开，关掉你的手机， 外带一块甜甜圈， 让我们开始闭关吧！
 
-1.1 Monday with Bill
+1.1 周一，与比尔共事
 ----------------------------------
 
-*Where you meet Bill, your new mentor and programming buddy.*
+*这里你会遇到比尔， 你新的导师和编程伙伴.*
 
-Welcome to your new job as a Ruby programmer. After you’ve settled
-yourself at your new desk with a shiny, latest-generation monitor and
-a cup of coffee, you can meet Bill, your mentor, experienced in all things
-Ruby. Yes, you have your first assignment at your new company, a new
-language to work with, and a new pair-programming buddy. What a
-Monday!
+欢迎来到您的新工作 － Ruby程序员.  在那个摆放最新显示器和一杯浓郁咖啡，光泽如新的新工位旁边，你遇到了比尔， 你的导师， 他对Ruby了如指掌。 当然， 你在新公司的第一份任务， 需要使用这门新的编程语言和这位新的结对编程伙伴来一起完成。 多爽的周一啊！有木有！
 
-Your assignment is with the Enterprise Integration Department (which
-is corporate-speak for “the folks hammering the legacy systems back into shape”). Given that Ruby is a new language for you, you’ve been
-practicing for a few weeks already. Bill, who has some months of Ruby
-under his belt, looks like a nice chap, so you know you’re going to have
-a good time—at least until your first petty fight over coding conventions.
-The boss wants you and Bill to get to know each other, so she’s asked
-the two of you to review the source of a small application called Bookworm.
-The company developed Bookworm to manage its large internal
-library of books. The program has slowly grown out of control as many
-different developers added their pet features to the mix, from text previews
-to magazine management and the tracking of borrowed books. As
-a result, the Bookworm source code is in dire need of refactoring. You
-and your new pal Bill have been selected to whip the Bookworm source
-back into shape.
-You and Bill are ready to get to work. With Bill sitting next to you at
-your desk, you fire up your text editor.
+你被分配到企业集成部（这里的人主要工作是完善遗留系统）。由于Ruby对你来说是门新语言，已经练习了几个星期。 而比尔， 已经有使用几个月Ruby的光荣经历了， 他看上去像一个好哥们儿， 所以你知道，你们会愉快相处， 至少在第一次因为代码约定而争吵之前会吧。 老板想让你和比尔相互了解， 所以所以她请你们俩去查看一个叫Bookworm小应用的源码。公司开发Bookworm是为了管理其庞大的内部图书馆。该应用已经慢慢变的无法控制，许多不同的开发者往里面混入了他们的功能。从文本预览到杂志管理和借阅跟踪。导致Bookworm的源码迫需要重构。你和你的新搭档比尔已经选择去强力完善Bookworm源码了。
+
+你和比尔准备开工了， 比尔坐到你旁边，你打开了你的文本编辑器.(译者注：结对编程)
 
