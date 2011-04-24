@@ -1,0 +1,448 @@
+1.3 关于类的真相
+---------------------------
+
+*这里，比尔揭示了关于对象，类和常量令人吃惊的事实.*
+
+“At this stage,” Bill observes, “it’s probably a good idea to take a break
+from coding and give a long, hard look at the theory behind Ruby
+classes.” He warns you that this will be a lot of theory in a single shot
+and adds that there is no escaping this if you want to understand the
+mechanics behind Ruby classes and objects.
+
+“I’ll be asking for your full attention, so let’s go find a quiet place to
+talk.” He grabs your arm and hustles you to the conference room.
+
+> **Is Monkeypatching Evil?**
+
+>In Section 1.2, Monkey See, Monkey Patch, on the previous
+>page, Bill told you that Monkeypatch is a derogatory term.
+>However, the same term is sometimes used in a positive sense,
+>to refer to Open Classes (31) in general. You might argue that
+>there are two types of Monkeypatches (33). Some happen by
+>mistake, like the one that you and Bill experienced, and they’re
+>invariably evil. Others are applied on purpose, and they’re
+>quite useful—especially when you want to bend an existing
+>library to your needs.
+
+>Even when you think you’re in control, you should still Monkeypatch
+>with care. Like any other global modification, Monkeypatches
+>can be difficult to track in a large code base. (Some
+>languages solve this problem with selector namespaces, which
+>are like Monkeypatches confined to a limited scope. This feature
+>might eventually find its way into Ruby 2.0—but don’t hold
+>your breath.)
+
+>So, Monkeypatches are useful but also dangerous. How do you
+>minimize their dangers while still reaping their benefits? Carefully
+>check the existing methods in a class before you define
+>your own methods. Be aware that some changes are riskier
+>than others. For example, adding a new method is usually safer
+>than modifying an existing one. Also, test your code thoroughly.
+>You’ll see more defensive techniques to manage Monkeypatches
+>in Section 9.2, Defusing Monkeypatches, on page 232.
+
+**What’s in an Object**
+
+“Let’s start with the basics: objects and classes,” Bill announces as you
+take your place in the conference room. He opens his laptop, launches
+irb, and types some code:
+
+    class MyClass
+      def my_method
+        @v = 1
+      end
+    end
+    obj = MyClass.new
+    obj.class # => MyClass
+
+Bill homes in on the obj object. If you could open the Ruby interpreter and look into obj, what would you see?
+
+**Instance Variables**
+
+Most importantly, objects contain instance variables. You’re not really
+supposed to peek at them, but you can do that anyway by calling
+Object#instance_variables( ). Bill’s example object has just a single instance
+variable:
+
+    obj.my_method
+    obj.instance_variables # => [:@v]
+
+Unlike in Java or other static languages, in Ruby there is no connection
+between an object’s class and its instance variables. Instance variables
+just spring into existence when you assign them a value, so you can
+have objects of the same class that carry different sets of instance variables.
+
+For example, if Bill hadn’t called obj.my_method( ), then obj would
+have no instance variable at all. You can think of the names and values
+of instance variables as keys and values in a hash. Both the keys and
+the values can be different for each object.
+
+Bill stretches his arms in an attempt at dramatic gesturing. “That’s all
+there is to know about instance variables really. Now, let’s move on to
+methods.”
+
+**Methods**
+
+Besides having instance variables, objects also have methods. You can
+get a list of an object’s methods by calling Object#methods( ). Most objects
+(including obj in Bill’s example code) inherit a number of methods
+from Object, so this list of methods is usually quite long. Bill uses
+Array#grep( ) to show you that my_method( ) is in obj’s list:3
+
+    obj.methods.grep(/my/) # => [:my_method]
+
+If you could pry open the Ruby interpreter and look into obj, you’d
+notice that this object doesn’t really carry a list of methods. On the
+inside, an object simply contains its instance variables and a reference
+to its class.4 So, where are the methods?
+
+*Figure 1.1: Instance variables live in objects, and methods live in
+classes.*
+
+Bill walks over to the conference-room whiteboard and starts scribbling
+all over it. “Think about it for a minute,” he says, drawing Figure 1.1.
+“Objects that share the same class also share the same methods, so the
+methods must be stored in the class, not the object.”
+
+While you’re looking at the picture, Bill also takes the chance to highlight
+an important distinction in the terminology. You can rightly say
+that “obj has a method called my_method( ),” meaning that you’re able to
+call obj.my_method(). By contrast, you shouldn’t say that “MyClass has
+a method named my_method( ).” That would be confusing, because it
+would imply that you’re able to call MyClass.my_method() as if it were a
+class method.
+
+To remove the ambiguity, you should say that my_method( ) is an
+instance method (not just “a method”) of MyClass, meaning that it’s
+defined in MyClass, and you actually need an instance of MyClass to call
+it. It’s the same method, but when you talk about the class, you call
+it an instance method, and when you talk about the object, you simply
+call it a method. Remember this distinction, and you won’t get confused
+when writing introspective code like this:
+
+    String.instance_methods == "abc".methods # => true
+    String.methods == "abc".methods # => false
+
+Bill wraps it all up: an object’s instance variables live in the object itself, and an object’s methods live in the object’s class. That’s why objects of the same class share methods but don’t share instance variables.
+
+That’s all you really have to know about objects, instance variables, and
+methods. But since he’s brought classes into the picture, Bill suggests
+you take a closer look.
+
+**Classes Revisited**
+
+“Now, my friend, this might be the most important thing you’ll ever
+learn about the Ruby object model,” Bill exclaims, pausing for dramatic
+effect. “Classes themselves are nothing but objects.”
+
+Since a class is an object, everything that applies to objects also applies
+to classes. Classes, like any object, have their own class, as instances
+of a class called Class:
+
+    "hello".class # => String
+    String.class # => Class
+
+Like any object, classes also have methods. Remember what Bill covered
+in Section 1.3, What’s in an Object, on page 34? The methods of
+an object are also the instance methods of its class. This means that
+the methods of a class are the instance methods of Class:
+
+    inherited = false
+    Class.instance_methods(inherited) # => [:superclass, :allocate, :new]
+
+You already know about new( ), because you use it all the time to create
+objects. The allocate( ) method plays a support role to new( ), and
+superclass( ) does exactly what its name suggests, returning the class’s
+superclass:
+
+    String.superclass # => Object
+    Object.superclass # => BasicObject
+    BasicObject.superclass # => nil
+
+All classes ultimately inherit from Object, which in turn inherits from
+BasicObject, the root of the Ruby class hierarchy.5 Bill also shows you
+the superclass of Class:
+
+    Class.superclass # => Module
+    Module.superclass # => Object
+
+So, a class is just a souped-up module with three additional methods—
+new( ), allocate( ), and superclass( )—that allow you to create objects or
+arrange classes into hierarchies. Apart from these (admittedly important)
+differences, classes and modules are pretty much the same. Most
+of what you will learn about classes also applies to modules, and
+vice versa.
+
+*Figure 1.2: Classes are just objects*
+
+Bill concludes his lecture on classes with a piece of code and a whiteboard
+diagram:
+
+    class MyClass; end
+    obj1 = MyClass.new
+    obj2 = MyClass.new
+
+“See?” Bill asks, pointing at the diagram (Figure 1.2). “Classes and regular
+objects live together happily.”
+
+According to your programming pal, there’s one last wrinkle in the
+“Classes are objects” theme: just like you do with regular objects, you
+hold onto classes with references. If you look at the previous code, you’ll
+see that obj1 and MyClass are both references—the only difference being
+that obj1 is a variable, while MyClass is a constant. To put this differently,
+just as classes are nothing but objects, class names are nothing
+but constants. Bill takes the opportunity to dive into a sermon about
+constants.
+
+**Constants**
+
+Any reference that begins with an uppercase letter, including the names
+of classes and modules, is a constant. The scope of constants follows 
+
+>**But Aren’t Java Classes Objects, Too?**
+
+>It’s true that classes in both Java and C# are themselves
+>instances of a class named Class. C# even allows you to add
+>methods to existing classes, pretty much like Ruby’s Open
+>Classes (31) do.
+>
+>However, classes in Java and C# are quite different from, and
+>more limited than, regular objects. For example, you can’t create
+>a class at runtime, change a class’s methods, or pull most
+>other tricks from this book. In a sense, Class objects are more
+>like class descriptors than “real” classes, in the same way that
+>Java’s File class is a file descriptor rather than the actual file.
+>
+>This flexibility is typical of Ruby’s metaprogramming: while other
+>languages allow you to read class-related information, Ruby
+>allows you to write that information at runtime. For example,
+>as you will see in Chapter 4, Thursday: Class Definitions, on
+>page 122, you can actually call Class.new to create new classes
+>at runtime.
+
+>**What Are Modules Good For?**
+
+>In Section 1.3, Classes Revisited, on page 37, you learned that
+>a module is basically a bunch of instance methods and that
+>a class is just a module with a couple of additional features (a
+>superclass and a new( )method). Actually, classes andmodules
+>are so closely related that youmight wonder why this distinction
+>exists at all. Couldn’t Ruby get away with a single “thing” that
+>plays both roles?
+
+>The main reason for having both modules and classes is clarity:
+>by carefully picking either a class or a module, you can make
+>your code more explicit. Usually, you pick a module when you
+>mean it to be included somewhere (or maybe to be used as
+>a Namespace (41)), and you pick a class when you mean it to
+>be instantiated or inherited. So, although you can use classes
+>and modules interchangeably in many situations, you’ll probably
+>want to make your intentions clear by using them for different
+purposes.
+
+*Figure 1.3: Bill’s napkin drawing of a constants tree*
+
+its own special rules, different from the scope of variables.7 Your pairprogramming partner Bill shows you a quick example:
+
+    module MyModule
+      MyConstant = 'Outer constant'
+      class MyClass
+        MyConstant = 'Inner constant'
+      end
+    end
+
+Ignoring the whiteboard behind him, Bill picks up a napkin from his
+shirt pocket and sketches out the constants in this code (Figure 1.3).
+As he points out, all the constants in a program are arranged in a tree
+similar to a file system, where modules (and classes) are directories
+and regular constants are files. Just like in a file system, you can have
+multiple files with the same name, as long as they live in different directories.
+
+You can even refer to a constant by its path, just as you’d do with
+a file. For example, you can write MyModule::MyClass::MyConstant
+
+The similarities between Ruby constants and files go even further: you
+can use modules to organize your constants, the same way that you use
+directories to organize your files. As usual, Bill has an example handy.
+
+**The Rake Example**
+
+The first versions of Rake, the popular Ruby build system, defined classes
+with obvious names such as Task and FileTask.9 These names had a
+good chance of clashing with other class names from different libraries.
+To prevent clashes, recent versions of Rake define the classes inside a
+Rake module:
+
+    module Rake
+      class Task
+      # ...
+
+Now the full name of the Task class is Rake::Task, which is unlikely to
+clash with someone else’s name. A module such as Rake, which only
+exists to be a container of constants, is called a Namespace. 
+
+What if you have an old Rake build file lying around, one that still references the earlier, non-namespaced class names? To maintain compatibility
+with older build files, Rake provides a command-line option
+named classic-namespace. This option loads an additional source file
+that assigns the new, safer constant names to the old, unsafe ones:
+
+    Task = Rake::Task
+    FileTask = Rake::FileTask
+    FileCreationTask = Rake::FileCreationTask
+    # ...
+
+Now both Task and Rake::Task reference the same Class instance, so you
+can use either constant. (Of course, now that you have the old names
+around, you have to worry about clashes again—so it would probably
+be a good idea to update your build file instead.)
+
+Enough of this digression on constants. It’s time to go back to the focus
+of Bill’s improvised lecture—objects and classes—and wrap up what
+you’ve just learned.
+
+>**The Paths of Constants**
+>In Section 1.3, Constants, on page 38, you learned that constants
+>are nested like directories and files. Also like directories
+>and files, constants are uniquely identified by their paths. Constants’
+>paths use a double colon as a separator (this is akin to
+>the scope operator in C++):
+>
+    module M
+      class C
+        X = 'a constant'
+      end
+      C::X # => "a constant"
+    end
+    M::C::X # => "a constant"
+>
+>If you’re sitting deep inside the tree of constants, you can provide
+>the absolute path to an outer constant by using a leading
+>double colon as root:
+>
+    module M
+      Y = 'another constant'
+      class C
+        ::M::Y # => "another constant"
+      end
+    end
+>
+>The Module class also provides an instance method and a class
+>method that, confusingly, are both called constants( ). Module#
+>constants( ) returns all constants in the current scope, like
+>your file system’s ls command (or dir command, if you’re running
+>Windows). Module.constants( ) returns all the top-level constants
+>in the current program, including class names:
+>
+    M.constants # => [:C, :Y]
+    Module.constants[0..1] # => [:Object, :Module]
+>
+>Finally, if you need the current path, check out Module.nesting( ):
+>
+    module M
+      class C
+        module M2
+          Module.nesting # => [M::C::M2, M::C, M]
+        end
+      end
+    end
+>
+
+>**Pruning Your Tree of Constants**
+>
+>Imagine finding a motd.rb file on the Net that displays a “message
+>of the day” on the console. You want to incorporate this
+>code into your latest program, so you load the file to execute it
+>and display the message:
+>
+    load('motd.rb' )
+>
+>Using load( ), however, has a side effect. The motd.rb file probably
+>defines variables and classes. Although variables fall out of
+>scope when the file has finished loading, constants don’t. As a
+>result, motd.rb can pollute your program with the names of its
+>own constants—in particular, class names.
+>You can force motd.rb to keep its constants to itself by passing
+>a second, optional argument to load( ):
+>
+    load('motd.rb' , true)
+>
+>If you load a file this way, Ruby creates an anonymous module,
+>uses that module as a Namespace (41) to contain all the
+>constants from motd.rb, and then destroys the module.
+The require( )method is quite similar to load( ), but it’smeant for a
+different purpose. You use load( ) to execute code, and you use
+require( ) to import libraries. That’s why require( ) has no second
+argument: those leftover class names are probably the reason
+why you imported the file in the first place.
+
+**Objects and Classes Wrap-Up**
+
+What’s an object? It’s just a bunch of instance variables, plus a link to
+a class. The object’s methods don’t live in the object—they live in the
+object’s class, where they’re called the instance methods of the class.
+What’s a class? It’s just an object (an instance of Class), plus a list of
+instance methods and a link to a superclass. Class is a subclass of
+Module, so a class is also a module.
+
+Like any object, a class has its own methods, such as new( ). These are
+instance methods of the Class class. Also like any object, classes must
+be accessed through references. You already have a constant reference
+to each class: the class’s name.
+
+“That’s pretty much all there is to know about objects and classes,”
+Bill asserts. “If you can understand this, you’re well on your way to
+understanding metaprogramming. Now, let’s turn back to the code.”
+
+**Another Learning Opportunity**
+
+It takes only a short while for you and Bill to get a chance to apply your
+newfound knowledge about classes. After ten minutes sifting through
+the Bookworm source code, you stumble upon a class that represents
+a snippet of text out of a book:
+
+    class TEXT
+      # ...
+
+Since the names of Ruby classes are conventionally camel cased,10 you
+and Bill rename this class Text:
+
+    class Text
+      # ...
+
+You change the name of the class everywhere it’s used, you run the unit
+tests, and—surprise!—the tests fail with a cryptic error message:
+
+    TypeError: Text is not a class
+
+“D’oh! Of course it is,” you exclaim. Bill is as puzzled as you are, so it
+takes the two of you some time to find the cause of the problem. As it
+turns out, the Bookworm application requires a popular library named
+ActionMailer. ActionMailer, in turn, uses a text-formatting library that
+defines a module named—you guessed it—Text:
+
+    module Text
+      # ...
+
+That’s where the problem lies: since Text is already the name of a module,
+Ruby complains that it can’t also be the name of a class at the
+same time. In a sense, you were lucky that this name clash was readily
+apparent. If ActionMailer’s Text had been a class, you might have
+never noticed that this name already existed. Instead, you’d have inadvertently Monkeypatched (33) the existing Text class, with unpredictable
+results. (On the other hand, as Bill puts it, “That’s what unit tests
+are for.”)
+
+*Figure 1.4: Bill’s object model diagram again*
+
+Fixing the clash between your Text class and ActionMailer’s Text module
+is as easy as wrapping your class in a Namespace (41):
+
+    module Bookworm
+      class Text
+        # ...
+
+You and Bill also change all references to Text into references to Bookworm::
+Text. It’s unlikely that an external library defines a class named
+Bookworm::Text, so you should be safe from clashes now.
+
+That was a lot of learning in a single sitting! You deserve a break and a
+cup of coffee—and a little quiz.

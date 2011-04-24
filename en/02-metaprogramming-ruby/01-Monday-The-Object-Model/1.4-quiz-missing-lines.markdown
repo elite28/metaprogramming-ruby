@@ -1,0 +1,45 @@
+1.4 Quiz: Missing Lines
+-----------------------
+
+*Where you prove to Bill that you can find your way around the Ruby object model.*
+
+Back in Section 1.3, Classes Revisited, on page 37, Bill showed you how
+objects and classes are related. As an example, he used a snippet of
+code (reprinted here) and a whiteboard diagram (shown in Figure 1.4):
+
+    class MyClass; end
+    obj1 = MyClass.new
+    obj2 = MyClass.new
+
+Bill had drawn arrows to show you some of the connections between
+the program entities. Now he’s asking you to add more lines and boxes
+to the diagram and answer these questions:
+
+1 What’s the class of Object?
+
+2 What’s the superclass of Module?
+
+3 What’s the class of Class?
+
+4 Imagine that you execute this code:
+    obj3 = MyClass.new
+    obj3.instance_variable_set("@x" , 10)
+
+Can you add obj3 to the diagram?
+
+You can use irb and the Ruby documentation to find out the answers.
+
+**Quiz Solution**
+
+Your enhanced version of Bill’s diagram is in Figure 1.5, on the next
+page. As you can easily check in irb, the superclass of Module is Object.
+You don’t even need irb to know what the class of Object is: since
+Object is a class, its class must be Class. This is true of all classes,
+meaning that the class of Class must be Class itself. Don’t you just love
+self-referential logic?
+
+Finally, calling instance_variable_set( ) blesses obj3 with its own instance
+variable @x. If you find this concept surprising, remember that in a dynamic
+language such as Ruby every object has its own list of instance
+variables, independent of other objects—even other objects of the same
+class.
