@@ -54,27 +54,17 @@
        Hello
        Hello
 
+Ruby执行了类中定义的代码，只是因为它可以执行任意代码。这是否意味着，定义了三个相同名字的类？ 并不是这样， 比尔又给出了第二个例子：
+
+    class D
+      def x; 'x' ; end
+    end
 
 >你应该把你的方法放到哪里?
 
 >在1.2节, 开放类的28页, 比尔演示了如何把to_alphanumeric( )方法移动到String类里。
->但是即使你能这样做，你可能也想知道你是否应该这样做。给系统中的每一个字符串都暴露一个to_alphanumeric( )方法？
->should do it. Is it right to have every string in the system expose
->a to_alphanumeric( ) method? Wouldn’t it be better to leave the
->String class alone?
->This time around, you’re dealing with a pretty generic functionality
->that makes sense for all strings—so you can argue it
->makes sense to follow Bill’s suggestion and put alphanumeric
->conversion in the String class. In general, however, you should
->think hard before you pollute Ruby’s standard libraries with a
->lot of domain-specific methods. After all, a class such as String
->already comes with loads of methods that you have to remember.
->You do have alternatives to using an Open Class (31). You
->could define a new AlphanumericString class or even add specific
->methods like to_alphanumeric( ) only to a few, selected
->strings (you’ll learn how to do that in the discussion of Singleton
->Methods (133)). You’ll learn more Open Class alternatives
->and variations in the rest of this book
+>但是即使你能这样做，你可能也想知道你是否应该这样做。给系统中的每一个字符串都暴露一个to_alphanumeric()方法是否正确？独立出String类,>单写一个方法， 岂不是更好？ 这次，你处理的是一个非常通用的功能，适用于所有的字符串.所以你能听从比尔的建议，把字母数字的转换放到String类里。
+>通常情况如此。 然而， 在你用一大堆特定领域方法污染Ruby标准库之前，请好好想想。 毕竟， 像String这样的类， >带有大量的你必须记住的方法。你可以选择去打开类。你也能定义一个新的AlphanumericString类，甚至可以专门为少数的选定的字符对象增加to_al>phanumeric( )方法 (你会在单例方法的讨论部分学会如何去做(133页)). 在以后的章节，你会学到更多关于打开类的替代方法和他们之间的差异。
 
     class D
       def y; 'y' ; end
@@ -83,42 +73,30 @@
     obj.x # => "x"
     obj.y # => "y"
 
-When the previous code mentions class D for the first time, no class
-by that name exists yet. So, Ruby steps in and defines the class—and
-the x( ) method. At the second mention, class D already exists, so Ruby
-doesn’t need to define it. Instead, it just reopens the existing class and
-defines a method named y( ) there.
+前一段代码， 第一次提到D类的时候，这个类还不存在呢。所以Ruby会按部就班的定义类和x()方法。第二段代码， 类D已经存在， 所以Ruby不需要再定义它，而是重新打开了它，并且在里面定义了y()。
 
-In a sense, the class keyword in Ruby is more like a scope operator than
-a class declaration. Yes, it does create classes that don’t yet exist, but
-you might argue that it does this as a side effect. For class, the core job is to move you in the context of the class, where you can define methods.
+从某种层面来说， Ruby的类关键字，与其说是类声明，还不如说是一个域控制器。确实如此， 它创建了不存在的类， 但是你可能认为这只是它做其他行为产生的副作用。类的核心工作是，为你提供一个可以定义方法的类的上下文。
 
-You might think that Bill is just nitpicking here, but this distinction
-about the class keyword is not an academic detail. It has an important
-practical consequence: you can always reopen existing classes, even
-standard library classes such as String or Array, and modify them on the
-fly. You can simply call this technique Open Class.
+你可能认为比尔在这吹毛求疵，但是关于类关键字的这些细节并不是夸夸其谈。它有一个重要的实际结果：你总是可以打开一个存在的类，甚至标准库里的类，诸如String或者是Array， 然后让代码飞（运行时修改）。 你可以把这种调用技术叫“打开类（开放类）”
 
-To demonstrate how people use Open Classes in practice, Bill runs
-through a quick example from a real-life library.
+为了演示人们在实际中如何使用打开类。比尔使用了一个真实库中的一个例子。
 
-**The Money Example**
+**示例： Money gem**
 
-As an example of Open Classes, Bill opens your eyes to the Money gem,
-a set of utility classes for managing money and currencies.1 Here’s how
-you create a Money object:
+比尔使用了一个叫Money的gem包，这是一个用来管理钱和货币单位的工具类集合， 比尔以此来作为打开类的例子。
+
+1 下面是如何创建Money的例子:
 
     cents = 9999
     # 99.99 US Dollars:
     bargain_price = Money.new(cents)
 
-As a shortcut, you can also convert any number to a Money object by
-calling Numeric#to_money( ):
+你可以通过调用Numeric#to_money( )方法，快速的转换任意数字为一个Money对象:
 
     # 100.00 US Dollars:
     standard_price = 100.to_money()
 
-Since Numeric is a standard Ruby class, you might wonder where the Numeric#to_money method comes from. Look through the source of the Money gem, and you’ll find code that reopens Numeric and defines that method:
+因为Numeric是Ruby的标准类，你可能想知道Numeric#to_money方法是哪儿来的。通过看Money gem包的源码， 你会发现一段代码， 它打开了Numeric类，并且定义那个方法：
 
     class Numeric
       def to_money
@@ -126,13 +104,11 @@ Since Numeric is a standard Ruby class, you might wonder where the Numeric#to_mo
       end
     end
 
-It’s quite common for libraries to use Open Classes this way.
+打开类。 有很多标准库十分普遍的做法。
 
-**The Problem with Open Classes**
+**打开类（Open Classes）的问题所在**
 
-You and Bill don’t have to look much further before you stumble upon
-another opportunity to use Open Classes. The Bookworm source contains
-a method that replaces elements in an array.
+你和比尔在发现下一个重构点之前， 对打开类的使用并没有考虑太多。Bookworm的源码包含了一个方法， 是用来替换一个数组中的符合条件的元素：
 
     def replace(array, from, to)
       array.each_with_index do |e, i|
@@ -140,9 +116,7 @@ a method that replaces elements in an array.
       end
     end
 
-Instead of focusing on the internal workings of replace( ), you can look
-at Bookworm’s unit tests to see how that method is supposed to be
-used:
+你看都没看replace( )的工作原理, 你只是看了Bookworm的单元测试演示如何去使用它:
 
     def test_replace
       book_topics = ['html' , 'java' , 'css' ]
@@ -151,7 +125,7 @@ used:
       assert_equal expected, book_topics
     end
 
-This time, you know what to do. You grab the keyboard (taking advantage of Bill’s slower reflexes) and move the method to the Array class:
+这一次， 你终于知道怎么去做了。 你以迅雷比尔来不及掩耳之势，抢过了键盘，把这个方法挪到了Array的类里:
 
     class Array
       def replace(from, to)
@@ -161,7 +135,7 @@ This time, you know what to do. You grab the keyboard (taking advantage of Bill�
       end
     end
 
-Then you change all calls to replace( ) into calls to Array#replace( ). For example, the test becomes as follows:
+然后你把所有replace()的调用都改成了Array#replace(). 例如，测试变成了现在这样:
 
     def test_replace
       book_topics = ['html' , 'java' , 'css' ]
@@ -170,16 +144,16 @@ Then you change all calls to replace( ) into calls to Array#replace( ). For exam
       assert_equal expected, book_topics
     end
 
-Everything looks like it’s in order until you run Bookworm’s unit tests. Not only do they break, but the failing tests seem to have nothing to do with the code you just edited. Bummer! What gives?
+看上去似乎一切顺利， 直到你运行了Bookworm的单元测试。 这次你傻眼了， 他们不仅没有通过， 而且有很多跟你修改代码无关的测试也报错了。杯具！ 到底发生了什么？
 
 **Monkey See, Monkey Patch**
 
-Your pal Bill comes to the rescue. “I think I know what just happened,” he mumbles. He fires up an irb session and gets a list of all methods in Ruby’s standard Array that begin with re:
+你的好搭档比尔来给你解围了。 “我想我知道发生了什么”，他又有灵感了。 他祭出了神器－irb， 召唤出Ruby的Array的所有方法列表，然后开始正则匹配re：
 
     [].methods.grep /^re/ # => [:replace, :reject, :reject!, :respond_to?, ...
 
-Yipes! In looking at the irb output, you spot the problem. Class Array already has a method named replace( ). When you defined your own replace( ) method, you inadvertently overwrote the original replace( ), a method that some other part of Bookworm was relying on.
+靠！ 根据irb输出的信息，你发现了问题所在。Array类已经有了一个叫replace()的方法。 当你定义你自己的replace()方法的时候， 你实际是重写了原来的replace()， 而Bookworm中有一部分代码也依赖与原始的replace()方法。
 
-This is the dark side to Open Classes: if you casually add bits and pieces of functionality to classes, you can end up with bugs like the one you just encountered. Some people would frown upon this kind of reckless patching of classes, and they would refer to the previous code with a derogatory name: they’d call it a *Monkeypatch*. 
+这是开放类的阴暗面啊，有木有: 如果你胡乱的给类里面加零碎的方法， 你就可能遇到上面的bug. 有一些人看不惯这样野蛮的方式， 就把这类方式起了一个贬义的名称： 他们叫它*Monkeypatch*. 
 
-You and Bill then rename your own version of Array#replace( ) to Array#substitute( ) and fix both the tests and the calling code. You just learned a lesson the hard way, but that didn’t spoil your attitude. If anything, this incident piqued your curiosity about Ruby classes. As it turns out, Bill is only too happy to tell you more about this topic.
+你和比尔把你自己的Array#replace()方法重命名为Array#substitute()方法， 并且修改了对应的单元测试，和调用它的代码。 你得到了深刻的教训，但是这并没有影响你的态度。  如果有什么影响的话， 那就是这次事故引发了你对Ruby类的好奇心。 事实证明， 比尔很高兴和你探讨这个话题。

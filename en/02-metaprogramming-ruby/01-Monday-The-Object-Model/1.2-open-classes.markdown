@@ -68,6 +68,13 @@ definition, as Bill demonstrates with a quick example:
        Hello
        Hello
 
+Ruby executed the code within the class just as it would execute any
+other code. Does that mean you defined three classes with the same
+name? The answer is no, as Bill demonstrates with a second example:
+
+    class D
+      def x; 'x' ; end
+    end
 
 >Where Should You Put Your Methods?
 
