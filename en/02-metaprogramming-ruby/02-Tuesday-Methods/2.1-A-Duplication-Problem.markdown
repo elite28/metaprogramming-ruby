@@ -1,0 +1,96 @@
+Chapter 2 Tuesday: Methods
+==================================
+
+Yesterday you learned about the Ruby object model and how to make Ruby classes sing and dance for you. Today you’re holding all calls to focus on methods.
+As you know, the objects in your code talk to each other all the time. Some languages—Java, for one—feature a compiler that presides over this chatting. For every method call, the compiler checks to see that the receiving object has a matching method. This is called static type checking, and the languages that adopt it are called static languages. So, for example, if you call talk_simple( ) on a Lawyer object that has no such method, the compiler protests loudly.
+
+Dynamic languages—such as Python and Ruby—don’t have a compiler policing method calls. As a consequence, you can start a program that calls talk_simple( ) on a Lawyer, and everything works just fine—that is, until that specific line of code is executed. Only then does the Lawyer complain that it doesn’t understand that call.
+Admittedly, that’s one advantage of static type checking: the compiler can spot some of your mistakes before the code runs. Before you ask the obvious question, realize that this protectiveness comes at a high price. Static languages force you to write lots of tedious, repetitive methods— these are the so-called boilerplate methods—just to make the compiler happy. (If you’re a Java programmer, just think of all the “get” and “set” methods you’ve written in your life or the innumerable methods that do nothing but delegate to some other object.)
+
+In Ruby, boilerplate methods aren’t a problem, because you can eas- ily avoid them with techniques that would be impractical or just plain impossible in a static language. In this chapter, we home in on those techniques.
+
+2.1 A Duplication Problem
+----------------------------------
+
+*Where you and Bill have a problem with duplicated code.*
+
+Your boss is happy with the job that you and Bill did yesterday. Today, she gives the two of you a more serious integration assignment.
+
+To give you a bit of history, some folks in the purchasing department are concerned that developers are spending oodles of company money on computing gear. To make sure things don’t get out of hand, they’re requesting a system that automatically flags expenses more than $99. (You read that right: ninety-nine. The purchasing department isn’t fool- ing around.)
+
+Before you and Bill, some developers took a stab at the project, coding a report that lists all the components of each computer in the company and how much each component costs. To date they haven’t plugged in any real data. Here’s where you and Bill come in.
+
+**The Legacy System**
+
+Right from the start, the two of you have a challenge on your hands: the data you need to load into the already established program is stored in a legacy system stuck behind an awkwardly coded class named DS (for “data source”):
+
+    class DS 
+      def initialize # connect to data source... 
+      def get_mouse_info(workstation_id) # ... 
+      def get_mouse_price(workstation_id) # ... 
+      def get_keyboard_info(workstation_id) # ... 
+      def get_keyboard_price(workstation_id) # ... 
+      def get_cpu_info(workstation_id) # ... 
+      def get_cpu_price(workstation_id) # ... 
+      def get_display_info(workstation_id) # ... 
+      def get_display_price(workstation_id) # ... 
+      # ...and so on
+
+DS#initialize() connects to the data system when you create a new DS() object. The other methods—and there are dozens of them—take a work-station identifier and return descriptions and prices for the computer’s components. The output is in the form of strings, with prices expressed as integer numbers rounded to the nearest dollar. With Bill standing by to offer moral support, you quickly try the class in irb:
+
+ds = DS.new 
+ds.get_cpu_info(42)    # => 2.16 Ghz
+ds.get_cpu_price(42)   # => 150
+ds.get_mouse_info(42)  # => Dual Optical
+ds.get_mouse_price(42) # => 40
+
+It looks like workstation number 42 has a 2.16GHz CPU and a luxuri- ous $40 dual optical mouse. This is enough data to get you started.
+
+**Double, Treble. . . Trouble**
+
+You and Bill have to wrap DS into an object that fits the reporting appli- cation. This means each Computer must be an object. This object has a single method for each component, returning a string describing both the component and its price. Remember that price limit the purchasing department set? Keeping this requirement in mind, you know that if the component costs $100 or more, the string must begin with an asterisk to draw people’s attention.
+
+You kick off development by writing the first three methods in the Computer class:
+
+    class Computer 
+      def initialize(computer_id, data_source)
+        @id = computer_id
+        @data_source = data_source
+      end
+
+      def mouse
+        info = @data_source.get_mouse_info(@id) 
+        price = @data_source.get_mouse_price(@id)
+        result = "Mouse: #{info} ($#{price})"
+        return "* #{result}" if price >= 100
+        result
+      end
+
+      def cpu 
+        info = @data_source.get_cpu_info(@id)
+        price = @data_source.get_cpu_price(@id)
+        result = "Cpu: #{info} ($#{price})"
+        return "* #{result}" if price >= 100
+        result
+      end
+
+      def keyboard
+        info = @data_source.get_keyboard_info(@id)
+        price = @data_source.get_keyboard_price(@id)
+        result = "Keyboard: #{info} ($#{price})"
+		return "* #{result}" if price >= 100
+		result
+      end
+      
+      # ...
+    end
+
+At this point in the development of Computer, you find yourself bogged down in a swampland of repetitive copy and paste. You have a long list of methods left to deal with, and you should also write tests for each and every method, because it’s easy to make mistakes in duplicated code. This is getting boring fast—not to mention painful.
+
+Bill is right there with you, verbalizing precisely what’s going through your head: “This is just the same method again and again, with some minor changes.” You turn to each other and ask simultaneously, as if on cue, “How can we refactor it?”
+
+**Bill’s Plan**
+
+“I can think of not one but two different ways to remove this duplication,” Bill brags. He suggests using either Dynamic Methods or a special method called method_missing( ).By trying both solutions, you and Bill can decide which one you like better. You agree to start with Dynamic Methods and get to method_missing( ) after that.
+
+

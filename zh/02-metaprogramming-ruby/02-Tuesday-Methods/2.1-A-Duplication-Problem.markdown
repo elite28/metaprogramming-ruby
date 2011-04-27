@@ -1,0 +1,98 @@
+第二章 星期二: 方法
+==================================
+
+昨天你学习了Ruby的对象模型以及如何创建和使用类的相关内容。 今天你的任务是集中注意力掌握Ruby方法。
+
+我想你应该知道，程序中会有频繁的对象交互。在Java语言中， 这些对象之间的交互是交给编译器来管理的。对于每一次方法调用，编译器会检查接收对象是否有一个对应的方法存在。这个过程叫做静态类型检查，凡是采用这种机制的语言统称为静态语言。举例来说，在你的程序中对一个Lawyer类的对象调用一个不存在的talk_simple()的方法的话，编译器就会报错。
+
+而对于动态语言，譬如Python和Ruby，它们不使用编译器来监控方法调用。所以，你的程序可以完美工作直至碰到Lawyer类的对象调用一个不存在的talk_simple()方法，此时程序会报错说Lawyer对象不理解这个方法调用。
+
+静态类型检查一个公认的好处在于：编译器可以在代码运行之前发现代码中的错误。在你问一个必然会问的问题之前（这不是很棒么？），应该意识到实现这种保护机制的代价是很大的。这种静态语言强制你必须写很多罗嗦的、重复的方法声明【+these are the so-called boilerplate methods】，做这些工作仅仅是为了满足编译器的需求而并没有什么实际意义。（如果你是一位Java程序员，想想你曾经写过多少“get”和“set”方法，还有那数不清又毫无作用的对象委托方法。【innumerable methods that do nothing but delegate to some other object.】）
+
+使用Ruby， 你不再需要写那么多【+boilerplate methods】，而是通过一些很巧妙的方式来避开它，这些方式可能对于熟悉静态语言的程序员来说理解起来非常的不可思议或者觉得不切实际。那么在这一章，我们就来深入了解一下这些技巧。
+
+2.1 关于“代码冗余”的问题
+----------------------------------
+
+**当你和比尔碰到“代码冗余”的问题**
+
+你的上司对于你和比尔昨天的工作给与了充分的肯定。今天，她分配了两个更serious integration的任务。
+
+故事背景：采购部门的一些家伙觉得软件开发人员购置计算机配件花费了大笔的钱。为了掌控花费情况，他们需要一个可以自动标识开销大于99美元配件的系统。（对，你没有看错，是99美元。采购部门可不是吃干饭的。）
+
+在你和比尔开工之前，已经有人做了这样一个程序，这个程序可以列出每一台计算机及其配件的价格表。可惜的是，至今这个程序没有使用过一条真实的数据。
+
+**遗留系统**
+
+工作开始的第一件事情就比较棘手：你需要把真实的数据载入那个已经开发完成的程序中。但是，这些数据存储在一个遗留系统中，更为不爽的是，它还隐藏在一段看似繁琐的名为DS（"data source"）类的代码中：
+
+    class DS 
+      def initialize # connect to data source... 
+      def get_mouse_info(workstation_id) # ... 
+      def get_mouse_price(workstation_id) # ... 
+      def get_keyboard_info(workstation_id) # ... 
+      def get_keyboard_price(workstation_id) # ... 
+      def get_cpu_info(workstation_id) # ... 
+      def get_cpu_price(workstation_id) # ... 
+      def get_display_info(workstation_id) # ... 
+      def get_display_price(workstation_id) # ... 
+      # ...and so on
+
+在你创建一个DS类的对象时，DS#initialize()方法会连接到数据系统。DS类中定义的其他方法都是使用一个计算机id（workstation_id）作为参数，返回这个计算机对应配件的描述或价格。这些方法的结果都是输出字符串格式的数据，其中，价格是通过近似得到的整数。正当比尔准备给你技术支持时，你已经在irb中开始试用这个类：
+
+    ds = DS.new 
+    ds.get_cpu_info(42)    # => 2.16 Ghz
+    ds.get_cpu_price(42)   # => 150
+    ds.get_mouse_info(42)  # => Dual Optical
+    ds.get_mouse_price(42) # => 40
+
+哈，看起来id号为42的计算机有一颗2.16GHz主频的CPU，并且配备了一只非常奢侈的价值40美元的光点鼠标。能得到这些数据是一个不错的开端哦。
+
+**两遍，三遍…… 麻烦来了**
+
+现在，你和比尔现在应该把DS改成一个面向对象的东东，这样会更适合这个类似报表的应用。也就是说，每一台计算机必须作为一个对象，对于这个计算机对象的每一个配件都有一个独立的方法，这个方法返回相应配件的描述及其价格。还记得采购部门对于价格的限制么？把这个需求记在脑子里，如果一个配件花费大于等于100美元时，那么必须用星号标出来引起人们的注意。
+
+项目开始！首先，你写了下面的这个包含三个方法的Computer类：
+
+    class Computer 
+      def initialize(computer_id, data_source)
+        @id = computer_id
+        @data_source = data_source
+      end
+
+      def mouse
+        info = @data_source.get_mouse_info(@id) 
+        price = @data_source.get_mouse_price(@id)
+        result = "Mouse: #{info} ($#{price})"
+        return "* #{result}" if price >= 100
+        result
+      end
+
+      def cpu 
+        info = @data_source.get_cpu_info(@id)
+        price = @data_source.get_cpu_price(@id)
+        result = "Cpu: #{info} ($#{price})"
+        return "* #{result}" if price >= 100
+        result
+      end
+
+      def keyboard
+        info = @data_source.get_keyboard_info(@id)
+        price = @data_source.get_keyboard_price(@id)
+        result = "Keyboard: #{info} ($#{price})"
+		return "* #{result}" if price >= 100
+		result
+      end
+      
+      # ...
+    end
+
+写完这段代码，你发现自己在不断的复制粘贴。而且你还有一大段代码需要实现。因为在复制代码时很容易出错，所以这里面的每一个方法都需要写测试。这真是一个效率低下的工作方式！
+
+比尔一直在你身旁看你写的代码，他很精辟的形容你做的工作：“你在一遍又一遍的重复写同一个方法，然后在每个方法里做一些很小的改动。”这时你俩异口同声的问“我们怎么样重构这段代码？”
+
+**比尔的计划**
+
+“我能想到两个解决这段代码冗余的方式。”比尔自豪地说。他建议使用动态方法（Dynamic Methods）或者一个叫做method\_missing()的特殊方法。为了比较哪种解决方式更好一些，你和比尔决定都尝试一下。最终，你俩达成一致，先从动态方法开始。
+
+

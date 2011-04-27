@@ -1,0 +1,328 @@
+2.3 method_missing()
+----------------------------------
+Where you listen to spooky stories about Ghost Methods and dynamic proxies and you try a second way to remove duplicated code.
+
+“With Ruby, there’s no compiler to enforce method calls,” Bill pro- nounces. “This means you can call a method that doesn’t exist.” For example:
+
+    class Lawyer; end
+    nick = Lawyer.new nick.talk_simple
+    ⇒	NoMethodError: undefined method ‘talk_simple' for #<Lawyer:0x3c848> [...]
+
+Do you remember how method lookup works? When you call talk_simple, Ruby goes into nick’s class and browses its instance methods. If it can’t find talk_simple() there, it searches up the ancestors chain into Object and eventually into Kernel.
+
+Since Ruby can’t find talk_simple( ) anywhere, it admits defeat by calling a method named method_missing() on nick, the original receiver. Ruby knows that method_missing() is there, because it’s an instance method of Kernel that every object inherits.
+
+You and Bill decide to experiment by calling method_missing( ) yourselves. It’s a private method, but you can get to it through send( ):5
+
+    nick.send :method_missing, :my_method 
+    ⇒	NoMethodError: undefined method 'my_method' for #<Lawyer:0x3c7f8>
+
+You’ve just done exactly what Ruby does. You told the object, “I tried to call a method named my_method() on you, and you didn’t under- stand.” Kernel#method_missing() responded by raising a NoMethodError. This is what method_missing( ) does for a living. It’s like an object’s dead- letter office, the place where unknown messages eventually end up (and also, the place where NoMethodErrors come from).
+
+**Overriding method_missing()**
+
+Most likely, you will never need to call method_missing() yourself. Instead, you can override it to intercept unknown messages. Each message landing on method_missing()’s desk includes the name of the method that was called, plus any arguments and blocks associated with the call.
+
+    class Lawyer 
+      def method_missing(method, *args)
+        puts "You called: #{method}(#{args.join(', ')})"
+        puts "(You also passed it a block)" if block_given? end
+      end
+      
+      bob = Lawyer.new 
+      bob.talk_simple('a', 'b') do
+        # a block
+      end
+    ⇒	You called: talk_simple(a, b) 
+        (You also passed it a block)
+
+Overriding method_missing( ) allows you to call methods that don’t really exist. Let’s take a closer look at these Ghost Methods.
+
+**Ghost Methods**
+
+When you need to define many similar methods, you can spare yourself the definitions and just respond to calls through method_missing( ). This is like saying to the object, “If they ask you something and you don’t understand, do this.”
+
+A message that’s processed by method_missing( ) looks like a regular call from the caller’s side but has no corresponding method on the receiver’s side. This is named a Ghost Method. The following are some Ghost Method examples.
+
+**The Ruport Example**
+
+Ruport is a Ruby reporting library.6 You can use the Ruport::Data::Table class to create tabular data and convert it to different formats—text, for example:
+
+    require 'ruport'
+    
+    table = Ruport::Data::Table.new :column_names => ["country", "wine"], 
+                                    :data => [["France", "Bordeaux"],
+                                             ["Italy", "Chianti"], 
+                                             ["France", "Chablis"]]
+    
+    puts table.to_text
+
+    ⇒	+--------------------+ 
+        | country |	wine     | 
+        +--------------------+ 
+        | France  | Bordeaux | 
+        | Italy   | Chianti  | 
+        | France  | Chablis  | 
+        +--------------------+
+
+Let’s say you select only the French wines and convert them to comma- separated values:
+
+    found = table.rows_with_country("France") 
+    found.each do |row|
+      puts row.to_csv
+    end
+    
+    ⇒	France, Bordeaux 
+        France, Chablis
+
+What you just did is call a method named rows_with_country( ) on Ruport:: Data::Table. But how could the author of this class know you were going to have a column named country? The fact is, the author didn’t know that. If you look inside Ruport, you see that both rows_with_country( ) and to_csv( ) are Ghost Methods:
+
+    class Table 
+      def method_missing(id,*args,&block)
+        return as($1.to_sym,*args,&block) if id.to_s =~ /^to_(.*)/ 
+        return rows_with($1.to_sym => args[0]) if id.to_s =~ /^rows_with_(.*)/ 
+        super
+      end
+      # ...
+
+A call to rows_with_country( ) becomes a call to a more traditional-looking method, rows_with(:country), which takes the column name as an argu- ment. Also, a call to to_csv() becomes a call to as(:csv). If the method name doesn’t start with either of these two prefixes, Ruport falls back to Kernel#method_missing(), which throws a NoMethodError. (That’s what the super keyword is for.)
+
+Ghost Methods like rows_with_country() are just syntactic sugar; they can’t do anything that a regular method couldn’t. Still, you have to admit, they look sexier than regular methods. If you use Ruport to define new output formats (say, xsl) or new columns (say, price), you’ll get methods such as to_xsl( ) and rows_with_price( ) automatically.
+
+This example focused on very specific libraries, but Ghost Methods are also widely used in Ruby’s built-in, standard libraries. Consider this next example.
+
+**The OpenStruct Example**
+
+The OpenStruct class is a little bit of magic from the Ruby standard libraries. The attributes of an OpenStruct object work like Ruby vari- ables. If you want a new attribute, just assign it a value, and it will spring into existence:
+
+    require 'ostruct'
+
+    icecream = OpenStruct.new
+    icecream.flavor = "strawberry" 
+    icecream.flavor	                # => "strawberry"
+
+This works because the attributes of an OpenStruct object are actually Ghost Methods. OpenStruct#method_missing( ) catches the call to flavor=( ) and chops off the "=" at the end to get the attribute name. Then it stores the attribute name and its value into a hash. When you call a method that doesn’t end with an "=", method_missing( ) looks up the method name in the hash and returns the result. The code from OpenStruct is a tad complex, because it covers special cases such as error conditions. How- ever, it’s easy to write your own, simplified version of an open structure:
+
+    class MyOpenStruct 
+      def initialize
+        @attributes = {}
+      end
+    
+      def method_missing(name, *args) 
+        attribute = name.to_s 
+        if attribute =~ /=$/
+          @attributes[attribute.chop] = args[0]
+        else
+          @attributes[attribute]
+        end 
+      end
+    end
+
+    icecream = MyOpenStruct.new 
+    icecream.flavor = "vanilla" 
+    icecream.flavor              # => "vanilla"
+
+**Dynamic Proxies**
+
+Ghost Methods (73) are usually icing on the cake, but some objects actu- ally rely almost exclusively on them. These objects are often wrappers for something else—maybe another object, a web service, or code writ- ten in a different language. They collect method calls through method_ missing( ) and forward them to the wrapped object. Bill decides to demon- strate this technique. “I’ll give you a real-life example, but it’s going to be a tad complex,” he warns you. “So, I’ll have to ask for your full atten- tion for a few minutes. Have you ever used Flickr?”
+
+**The Flickr Example**
+
+Flickr7 is an online service that people use to upload and “tag” (that is, label) photographs. It also exposes a public HTTP API, which provides methods such as flickr.people.findByUsername( ). You pass a username to this method, and it returns the identifier of that user. You can call methods such as findByUsername( ) with a regular HTTP GET, for example by writing the following URL in a browser.8 You must also provide an API key, which you can get for free from http://www.flickr.com/services/ api/keys/:
+
+http://api.flickr.com/services/rest/?method=flickr.people.findByUsername&
+username=duncandavidson&api_key=your API key here
+
+You’ll get back a snippet of XML containing the identifier for user
+duncandavidson:
+
+    ⇒	<rsp stat="ok"> 
+          <user id="59532755@N00" nsid="59532755@N00">
+            <username>duncandavidson</username>
+          </user>
+        </rsp>
+
+Now that you have a user identifier, you can access the user’s data. For example, you can get duncandavidson’s photo tags by calling flickr.tags. getListUser(). But instead of using HTTP, you can do that through the flickr gem, a Ruby wrapper for Flickr.9 Just replace the dots in the Flickr method name with underscores so that it becomes a valid Ruby method name:
+
+    require 'flickr' 
+    flickr = Flickr.new([your API key here]) 
+    xml = flickr.tags_getListUser('user_id'=>'59532755@N00') 
+    tags = xml['who']['tags']['tag'] 
+    tags.grep /rails/  # => ["railsconf07", "railsconf08", "railsconf09",...
+
+The Flickr class converts the XML returned from Flickr to a tree-like object. The previous code peers into this object and finds out that this duncandavidson guy is a regular at Rails conferences.
+
+What if the Flickr API gets extended? You might assume that you’d have to wait for an updated version of the flickr library. Actually, the library supports changes in the API without flinching. In fact, the ver- sion of the Flickr API used to write this example was written before the flickr.tags.getListUser( ) method became available.
+
+This library manages to support new methods in the Flickr API even before they’re written, thanks to a little bit of metaprogramming magic: if you look into the source of the flickr library, you see that Flickr#tags_get- ListUser( ) and the other Flickr API methods are actually Ghost Methods:
+
+    class Flickr 
+      # Takes a Flickr API method name and set of parameters; 
+      # returns an XmlSimple object with the response 
+      def request(method, *params)
+        response = 
+          XmlSimple.xml_in(http_get(request_url(method, params)),
+                                    { 'ForceArray' => false })
+        raise response['err']['msg'] if response['stat'] != 'ok'
+        response
+      end
+    
+      def method_missing(method_id, *params)
+        request(method_id.id2name.gsub(/_/, '.'), params[0])
+      end
+    
+      # ...
+
+Flickr#method_missing( ) replaces all underscores in the method name with dots. Then it takes the first argument of the method, which it assumes to be an array of arguments, and forwards the name and arguments to Flickr#request( ). In turn, this method forwards the call to Flickr via HTTP, checks the resulting XML for errors, and finally returns it.
+
+>Delegates
+
+>You can get a quick, ready-to-use Dynamic Proxy (78) by using Ruby’s delegate library:
+
+    require 'delegate'
+    
+    class Assistant 
+      def initialize(name)
+        @name = name
+      end
+     
+      def read_email 
+        "(#{@name}) It's mostly spam."
+      end
+    
+      def check_schedule 
+        "(#{@name}) You have a meeting today."
+      end
+    end
+    
+    class Manager < DelegateClass(Assistant) 
+      def initialize(assistant)
+        super(assistant) 
+      end
+      
+      def attend_meeting 
+        "Please hold my calls."
+      end 
+    end
+
+>DelegateClass() is a Mimic Method (241) that creates and returns a new Class. This class defines a method_missing() that forwards calls to a wrapped object, such as an Assistant. Man- ager inherits this method_missing( ), so it becomes a proxy of the wrapped object. As a result, the Manager forwards to her Assis- tant all the messages she doesn’t understand:
+
+frank = Assistant.new("Frank") 
+anne = Manager.new(frank)
+anne.attend_meeting        # => "Please hold my calls."
+anne.read_email            # => "(Frank) It's mostly spam."
+anne.check_schedule        # => "(Frank) You have a meeting today."
+
+The flickr library also provides object-oriented wrappers for the Flickr API, but ultimately all these wrappers call Flickr#method_missing(). An object that catches Ghost Methods and forwards them to another object, maybe wrapping some logic around the call, is called a Dynamic Proxy.
+
+
+**Refactoring the Computer Class (Again)**
+
+“OK, you now know about method_missing(),” Bill observes. “Let’s go back to the Computer class and remove the duplication.”
+
+Once again, here’s the original Computer class:
+
+    class Computer 
+      def initialize(computer_id, data_source)
+        @id = computer_id
+        @data_source = data_source
+      end
+    
+      def mouse 
+        info = @data_source.get_mouse_info(@id) 
+        price = @data_source.get_mouse_price(@id)
+        result = "Mouse: #{info} ($#{price})"
+        return "* #{result}" if price >= 100
+        result
+      end
+    
+      def cpu
+        info = @data_source.get_cpu_info(@id)
+        price = @data_source.get_cpu_price(@id)
+        result = "Cpu: #{info} ($#{price})"
+        return "* #{result}" if price >= 100
+        result
+      end
+    
+      def keyboard
+        info = @data_source.get_keyboard_info(@id)
+        price = @data_source.get_keyboard_price(@id)
+        result = "Keyboard: #{info} ($#{price})"
+        return "* #{result}" if price >= 100
+        result
+      end
+    
+      # ...
+    end
+
+Computer is just a wrapper that collects calls, tweaks them a bit, and routes them to a data source. To remove all those duplicated methods, you and Bill can turn Computer into a Dynamic Proxy.
+
+**Refactor It!**
+
+It only takes a method_missing( ) to remove all the duplication from the Computer class.
+
+    class Computer 
+      def initialize(computer_id, data_source)
+        @id = computer_id
+        @data_source = data_source
+      end
+      
+      def method_missing(name, *args) 
+        super if !@data_source.respond_to?("get_#{name}_info") 
+        info = @data_source.send("get_#{name}_info", args[0]) 
+        price = @data_source.send("get_#{name}_price", args[0]) 
+        result = "#{name.to_s.capitalize}: #{info} ($#{price})" 
+        return "* #{result}" if price >= 100 
+        result
+      end 
+    end
+
+What happens when you call a method such as Computer#mouse( )? The call gets routed to method_missing( ), which checks whether the wrapped data source has a get_mouse_info() method. If it doesn’t have one, the call falls back to Kernel#method_missing( ), which throws a NoMethodError. If the data source knows about the component, the original call is con- verted into two calls to DS#get_mouse_info() and DS#get_mouse_price(). The values returned from these calls are used to build the final result. You try the new class in irb:
+
+    my_computer = Computer.new(42, DS.new) 
+    my_computer.cpu	# => * Cpu: 2.16 Ghz ($220)
+
+Hey! It worked.
+
+**Overriding respond_to?()**
+
+Bill is concerned about one last detail. As he points out, you called mouse( ) and its ilk Ghost Methods—but they’re not really methods. For example, they don’t appear in the generated documentation, and they’re not listed by Object#methods( ). Also, if you specifically ask a Computer whether it responds to a Ghost Method, it will flat-out lie:
+
+    cmp = Computer.new(0, DS.new) 
+    cmp.respond_to?(:mouse)	# => false
+
+You can avoid this kind of lie in your code if you override respond_to?( ) when you override method_missing( ):
+
+    class Computer 
+      def respond_to?(method)
+        @data_source.respond_to?("get_#{method}_info") || super 
+      end
+      
+      # ...
+
+>const_missing()
+
+>If you like Object#method_missing(), you should also check out Module#const_missing(). When you reference a constant that doesn’t exist, Ruby passes the name of the constant to const_missing( ) as a symbol.
+
+>You can define const_missing( ) on a specific Namespace (41) (either a module or a class). If you define it on the Object class, then all objects inherit it, including the top-level main object:
+
+    def Object.const_missing(name) 
+      name.to_s.downcase.gsub(/_/, ' ')
+    end
+ 
+    MY_CONSTANT	# => "my constant"
+
+Now Computer#respond_to?( ) knows about Ghost Methods:
+
+    cmp.respond_to?(:mouse)	# => true
+
+The call to super in respond_to?() guarantees that the default respond_ to?( ) is called for all other methods.
+
+You might think that it would also be a good idea to override Object# methods() so that it takes Ghost Methods into account. Bill concedes that this overriding would be sensible in some cases, but not in every case. For example, you probably don’t want to override methods() on an object that responds to thousands, or maybe infinite, Ghost Method calls. After a brief debate, you and Bill decide that you can live with the default Object#methods() in this particular case and move on to wrap up your work.
+
+**Refactoring Wrap-Up**
+
+You solved the same problem in two different ways. The first version of Computer introspects DS to get a list of methods to wrap and uses Dynamic Methods (68) and Dynamic Dispatches (64), which delegate to the legacy system. The second version of Computer does the same with Ghost Methods (73). Bill likes the second version better (he’s a method_missing( ) kind of guy), so you send that to the folks in purchas- ing. You and your pal Bill pat each other on the back and head out for a well-deserved lunch break and an unexpected quiz.
+
+
+

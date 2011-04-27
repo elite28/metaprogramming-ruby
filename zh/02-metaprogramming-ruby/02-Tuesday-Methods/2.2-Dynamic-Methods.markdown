@@ -1,0 +1,256 @@
+2.2 动态方法
+----------------------------------
+Where you learn how to call and define methods dynamically and remove the duplicated code.
+教你如何动态地调用和定义方法从而避免代码的冗余。
+
+“As I mentioned, we can remove the duplication in our code with either Dynamic Methods or method_missing(),” Bill recalls. “Forget about method_missing( ) for now—we’ll get to that this afternoon. To introduce Dynamic Methods, allow me to tell you a story from my youth,” he says.
+
+“正如我所说，我们可以通过动态方法或者method_missing()来解决这里的代码冗余。”比尔重复道。“先把method\_missing()放到一边，我们下午再研究它。在入手动态方法之前，先听我说一个我年轻时候的段子。”他说。
+
+“When I was a young developer learning C++,” Bill muses, “my mentors told me that when you call a method, you’re actually sending a message to an object. It took me a while to get used to that concept. Of course, if I’d been using Ruby back then, that notion of sending messages would have come more naturally to me.” Bill launches into a mini-presentation.
+
+“当我还年轻的时候，我用C++做开发，”比尔如有所思，“我的导师告诉我，当你调用一个方法时，你实际上是给一个对象发送一个消息。当时我接受并且习惯这个概念花了一段时间。当然，如果我当时一直使用Ruby做开发的话，这个概念接受会更自然些。”比尔发表了个小型演讲。
+
+**Calling Methods Dynamically**
+**动态方法调用**
+
+When you call a method, you usually do so using the standard dot notation:
+你通常会使用一个标准的点(.)来调用一个方法：
+
+    class MyClass 
+      def my_method(my_arg)
+        my_arg * 2
+      end 
+    end
+    
+    obj = MyClass.new 
+    obj.my_method(3) # => 6
+
+Bill demonstrates how you can also call MyClass#my_method() using Object#send() in place of the dot notation:
+比尔示范了如何不用点而使用Object#send()方式来调用MyClass#my_method()方法：
+
+    obj.send(:my_method, 3)	# => 6
+
+The previous code still calls my_method( ), but it does so through send( ). The first argument to send( ) is the message that you’re sending to the object—that is, the name of a method. You can use a string or a symbol, but symbols are considered more kosher (see the sidebar on the next page). Any remaining arguments (and the block, if one exists) are simply passed on to the method.
+
+上面的代码仍然是调用my_method()方法，但是它通过send()方式。传递给send()的第一个参数是你的消息发送的对象，也就是说，一个方法的名称。您可以使用字符串或一个符号，但符号被认为是更犹太教（参见下页侧栏）。任何剩余的参数（和块，如果有的话）仅仅是传递给方法。
+
+“Wait a minute,” you interject. “Why on Earth would I use send( ) instead of the plain old dot notation?” Bill is glad you asked, pointing out that this is one of the cool things about Ruby. With send( ), the name of the method that you want to call becomes just a regular argument. You can wait literally until the very last moment to decide which method to call, while the code is running. This technique is called Dynamic Dispatch, and you’ll find it wildly useful. To help reveal its magic, Bill shows you a couple of real-life examples.
+
+**The Camping Example**
+
+One example of Dynamic Dispatch comes from Camping, a minimalist Ruby web framework. A Camping application stores its configuration parameters as key-value pairs in a file created with YAML, a simple and very popular serialization format.1
+
+>符号（Symbols）
+
+>只要你在一个字符串前加一个冒号前缀，那么它就变成了一个符号：
+>
+    x = :this_is_a_symbol
+>
+>符号和字符串类型没有任何关系，他们分别属于不同的类。然而，对于Ruby的初学者来说经常将二者混淆。他们经常会问的一个问题是“符号到底有什么不同的地方？为什么不在所有的地方都使用正常的字符串呢？”
+
+>对于这个问题不同的人会给出不同的回答。有些人可能会指出符号不同于字符串的地方在于符号是不可变的：你可以修改一个字符串中的字符，但是你不能对符号进行同样的操作。另外，对于某些操作（譬如比较）来说，使用符号会比使用字符串速度更快。但是，选择使用符号还是字符串主要还是取决于惯例。在大多数情况下，符号会用作某个具体东西的名称，或者是元程序相关东西的名称，譬如方法名。
+
+>举例来说，当你使用Object#send()方式调用一个方法时，你需要将方法名作为第一个参数。虽然send()方式对于符号或者字符串的方法名都可以接受，但是传递一个符号作为方法名是最合适的：
+>
+    # 不推荐: 1.send("+", 2) 
+    1.send(:+, 2)	# => 3
+>
+>不管怎样，你可以很轻易的将符号和字符串进行转换。字符串转换成符号（调用String#to\_sym()或者String#intern()方法），符号转换成字符串（调用Symbol#to\_s或者Symbol#id2name()）。
+
+The configuration file for a blog application might look like this:
+
+    admin : Bill
+    title : Rubyland
+    topic : Ruby and more
+
+Camping copies keys and values from the file into its own configuration object. (This object is an OpenStruct. You can read more about this class in Section 2.3, The OpenStruct Example, on page 75.) Assume that you store your application’s configuration in a conf object. In an ideal world, the configuration code for the blog application would look like this:
+
+    conf.admin = 'Bill' 
+    conf.title = 'Rubyland' 
+    conf.topic = 'Ruby and more'
+
+The sad fact is, in real life, Camping’s source can’t contain this kind of code. That’s because it can’t know in advance which keys you need in your specific application—so it can’t know which methods it’s supposed to call. It can discover the keys you need only at runtime, by parsing the YAML file. For this reason, Camping resorts to Dynamic Dispatch. For each key-value pair, it composes the name of an assignment method, such as admin=( ), and sends the method to conf:
+
+    # Load configuration if any
+    if conf.rc and File.exists?( conf.rc ) 
+      YAML.load_file(conf.rc).each do |k,v|
+        conf.send("#{k}=", v)
+      end 
+    end
+
+Neat, huh?
+
+**The Test::Unit Example**
+
+Another example of Dynamic Dispatch (64) comes from the Test::Unit standard library. Test::Unit uses a naming convention to decide which methods are tests. A TestCase looks inside its own public methods and selects the methods that have names starting with test:
+
+    method_names = public_instance_methods(true) 
+    tests = method_names.delete_if {|method_name| method_name !~ /^test./}
+
+Now TestCase has an array of all test methods. Later, it uses send( ) to call each method in the array.2 This particular flavor of Dynamic Dispatch is sometimes called Pattern Dispatch, because it filters methods based on a pattern in their names.
+
+>Privacy Matters
+
+>Remember what Spiderman’s uncle used to say? “With great power comes great responsibility.” The Object#send() method is very powerful—perhaps too powerful. In particular, you can call any method with send( ), including private methods. Short of using a Context Probe (105), this is the easiest way to peek into an object’s private matters.
+
+>Some Rubyists think that send( ) makes it too easy to unwillingly break encapsulation. Ruby 1.9 experimented with changing send( )’s behavior, but the changes were ultimately reverted. As of Ruby 1.9.1, send( ) can still call private methods—and many libraries use it just for that purpose. On the other hand, you have a new public_send() method that respects the receiver’s privacy.
+
+
+Bill leans back in his chair. “Now you know about send( ) and Dynamic Dispatch, but there is more to Dynamic Methods than that. You’re not limited to calling methods dynamically. You can also define methods dynamically. I’ll show you how.”
+
+**Defining Methods Dynamically**
+
+You can define a method on the spot with Module#define_method( ). You just need to provide a method name and a block, which becomes the method body:
+
+    class MyClass 
+      define_method :my_method do |my_arg|
+        my_arg * 3
+      end 
+    end
+
+    obj = MyClass.new 
+    obj.my_method(2) # => 6
+
+define_method( ) is executed within MyClass, so my_method( ) is defined as an instance method of MyClass.3 This technique of defining a method at runtime is called a Dynamic Method.
+
+You learned how to use Module#define_method( ) in place of the def key- word to define a method and how to use send( ) in place of the dot nota- tion to call a method. Now you can go back to your and Bill’s original problem and put this knowledge to work.
+
+**Refactoring the Computer Class**
+
+Recall the code that pulled you and Bill into this dynamic discussion:
+
+    class Computer 
+      def initialize(computer_id, data_source)
+        @id = computer_id
+        @data_source = data_source
+      end
+    
+      def mouse 
+        info = @data_source.get_mouse_info(@id) 
+        price = @data_source.get_mouse_price(@id)
+        result = "Mouse: #{info} ($#{price})"
+        return "* #{result}" if price >= 100
+        result
+      end
+    
+      def cpu
+        info = @data_source.get_cpu_info(@id)
+        price = @data_source.get_cpu_price(@id)
+        result = "Cpu: #{info} ($#{price})"
+        return "* #{result}" if price >= 100
+        result
+      end
+    
+      def keyboard
+        info = @data_source.get_keyboard_info(@id) 
+        price = @data_source.get_keyboard_price(@id)
+        result = "Keyboard: #{info} ($#{price})"
+        return "* #{result}" if price >= 100
+        result
+      end
+    
+      # ...
+    end
+
+Now that you know about send( ) and define_method( ), you and Bill can get to work and remove the duplication in Computer. Time to refactor!
+
+**Step 1: Adding Dynamic Dispatches**
+
+You and Bill start, extracting the duplicated code into its own message- sending method:
+
+    class Computer 
+      def initialize(computer_id, data_source)
+        @id = computer_id
+        @data_source = data_source
+      end
+      
+      def mouse 
+        component :mouse
+      end
+
+      def cpu 
+        component :cpu
+      end
+
+      def keyboard 
+        component :keyboard
+      end
+
+      def component(name) 
+        info = @data_source.send "get_#{name}_info", @id 
+        price = @data_source.send "get_#{name}_price", @id 
+        result = "#{name.to_s.capitalize}: #{info} ($#{price})" 
+        return "* #{result}" if price >= 100 
+        result
+      end 
+    end
+
+A call to mouse() is delegated to component(), which in turn calls DS# get_mouse_info( ) and DS#get_mouse_price( ). The call also writes the cap- italized name of the component in the resulting string. (Since compo- nent( ) expects the name as a symbol, it converts the symbol to a string with Symbol#to_s().) You open an irb session and smoke-test the new Computer:
+
+    my_computer = Computer.new(42, DS.new) 
+    my_computer.cpu	# => * Cpu: 2.16 Ghz ($220)
+
+This new version of Computer is a step forward, because it contains far fewer duplicated lines, but you still have to write dozens of similar methods. To avoid writing all those methods, use define_method( ).
+
+**Step 2: Generating Methods Dynamically**
+
+You and Bill refactor Computer to use define_method( ):
+
+    class Computer 
+      def initialize(computer_id, data_source)
+        @id = computer_id
+        @data_source = data_source
+      end
+    
+      def self.define_component(name) 
+        define_method(name) {
+          info = @data_source.send "get_#{name}_info", @id 
+          price = @data_source.send "get_#{name}_price", @id 
+          result = "#{name.to_s.capitalize}: #{info} ($#{price})" 
+          return "* #{result}" if price >= 100 
+          result
+        }
+      end
+    
+      define_component :mouse
+      define_component :cpu 
+      define_component :keyboard
+    end
+    
+Note that define_method( ) is executed inside the definition of Computer, where Computer is the implicit self.4 This means you’re calling define_component( ) on Computer, so it must be a class method.
+
+You quickly test the slimmed-down Computer class in irb and discover that it still works. This is great news!
+
+**Step 3: Sprinkling the Code with Introspection**
+
+The latest Computer contains minimal duplication, but you can push it even further and remove the duplication altogether. How? By getting rid of all the define_component( ) methods. You can do that by introspecting the data_source argument and extracting the names of all components:
+
+    class Computer 
+      def initialize(computer_id, data_source)
+        @id = computer_id 
+        @data_source = data_source data_source.methods.grep(/^get_(.*)_info$/) {Computer.define_component $1 }
+      end
+    
+      def self.define_component(name)
+        define_method(name) {
+          info = @data_source.send "get_#{name}_info", @id
+          price = @data_source.send "get_#{name}_price", @id
+          result = "#{name.capitalize}: #{info} ($#{price})"
+          return "* #{result}" if price >= 100
+          result
+        }
+      end
+    end
+
+The new line in initialize() is where the magic happens. To understand it, you need to know a couple of things. First, if you pass a block to String#grep(), the block is evaluated for each element that matches the regular expression. Second, the string matching the parenthesized part of the regular expression is stored in the global variable $1. So, if data_source has methods named get_cpu_info() and get_mouse_info(), this code ultimately calls Computer.define_component() twice, with the strings "cpu" and "mouse". Note that you’re calling define_component() with a string rather than a symbol, so you don’t need to convert the argument to string.
+
+The duplicated code is finally gone for good. As a bonus, you don’t even have to write or maintain the list of components. If someone adds a new component to DS, the Computer class will support it automatically. Wonderful!
+
+**Let’s Try That Again!**
+
+Your refactoring was a resounding success, but Bill is not willing to stop here. “We said that we were going to try two different solutions to this problem, remember? We’ve only found one, involving Dynamic Dispatch (64) and Dynamic Methods (68).” Although it has served the two of you well, to be fair, you need to give the other solution a chance.
+
+“For this second solution,” Bill continues, “we need to talk about some strange methods that are not really methods and a very special method named method_missing( ).”
+
+

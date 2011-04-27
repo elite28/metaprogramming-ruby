@@ -1,0 +1,7 @@
+2.4	Quiz: Bug Hunt
+--------------------------
+
+Where you and Bill discover that bugs in a method_missing( ) can be diffi- cult to squash.
+Over lunch, Bill has a quiz for you. “My previous team followed a cruel office ritual,” he says. “Every morning, each team member picked a random number. Whoever got the smallest number had to take a trip to the nearby Starbucks and buy coffee for the whole team.”
+Bill explains that the team even wrote a class that was supposed to provide a random number (and some Wheel of Fortune–style suspense) when you called the name of a team member. Here’s the class:
+
