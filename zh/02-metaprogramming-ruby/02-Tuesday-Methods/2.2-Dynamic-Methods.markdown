@@ -33,11 +33,14 @@ Bill demonstrates how you can also call MyClass#my_method() using Object#send() 
 
 The previous code still calls my_method( ), but it does so through send( ). The first argument to send( ) is the message that you’re sending to the object—that is, the name of a method. You can use a string or a symbol, but symbols are considered more kosher (see the sidebar on the next page). Any remaining arguments (and the block, if one exists) are simply passed on to the method.
 
-上面的代码仍然是调用my_method()方法，但是它通过send()方式。传递给send()的第一个参数是你的消息发送的对象，也就是说，一个方法的名称。您可以使用字符串或一个符号，但符号被认为是更犹太教（参见下页侧栏）。任何剩余的参数（和块，如果有的话）仅仅是传递给方法。
+上面的代码仍然是调用my_method()方法，但是它是通过send()方式。传递给send()的第一个参数是你发送消息所接收的对象，也就是方法的名称。你可以使用一个字符串或符号，但通常符号是一个更好的选择（参见下页侧栏）。其他参数（和块（block），如果有的话）都是传递给方法的。
 
 “Wait a minute,” you interject. “Why on Earth would I use send( ) instead of the plain old dot notation?” Bill is glad you asked, pointing out that this is one of the cool things about Ruby. With send( ), the name of the method that you want to call becomes just a regular argument. You can wait literally until the very last moment to decide which method to call, while the code is running. This technique is called Dynamic Dispatch, and you’ll find it wildly useful. To help reveal its magic, Bill shows you a couple of real-life examples.
 
+“等一下，为什么要使用send()而不用以前的.来调用方法呢？”，你问道，比尔很高兴你这么问，这是Ruby语言中一个很酷的东东。用send()方式，方法名成了一个普通的参数，在代码运行的时候，你完全可以在最后时刻决定调用哪个方法。这就是动态方法调用，你慢慢的会发现它是非常有用的。为了让你深入体会动态方法调用的魔力，比尔决定给你看一个生活中的小例子。
+
 **The Camping Example**
+
 
 One example of Dynamic Dispatch comes from Camping, a minimalist Ruby web framework. A Camping application stores its configuration parameters as key-value pairs in a file created with YAML, a simple and very popular serialization format.1
 
